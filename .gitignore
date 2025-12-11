@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+user_history.json
+.DS_Store
+venv/
+.venv/
+node_modules/
+.env
+dist/
+build/
+.vscode/
+.idea/
