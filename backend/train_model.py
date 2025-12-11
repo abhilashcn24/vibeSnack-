@@ -26,46 +26,43 @@ class TimeCategoryEncoder(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
     def transform(self, X):
-        hours = X.iloc[:, 0] if isinstance(X, pd.DataFrame) else X[:, 0]
+        # Expecting numpy array, hour is col 0
+        if hasattr(X, 'values'):
+             hours = X.iloc[:, 0]
+        else:
+             hours = X[:, 0]
+             
         cats = [model_utils.get_time_category(h) for h in hours]
-        return pd.DataFrame(cats, columns=['time_of_day_category'])
+        return np.array(cats).reshape(-1, 1)
 
 def train():
     print("Loading data...")
     df = load_data()
     
     # Features and Target
-    X = df[['hour', 'mood', 'hunger', 'diet', 'context']]
-    y = df['snack_id']
+    # Order: hour(0), mood(1), hunger(2), diet(3), context(4)
+    X = df[['hour', 'mood', 'hunger', 'diet', 'context']].values
+    y = df['snack_id'].values
     
     # Preprocessing
-    # We need to handle:
-    # - hour: Numerical, but maybe cyclical or categorical? Let's bin it.
-    # - mood: Categorical
-    # - hunger: Numerical
-    # - diet: Categorical
-    # - context: Categorical
     
     # Define Transformers
     
     # 1. Time Transformer (Custom)
-    # We'll use the one from model_utils to ensure consistency, 
-    # BUT for the pipeline to pickle correctly, the class needs to be available.
-    # Since we import model_utils, it should be fine if we use model_utils.TimeCategoryEncoder
-    
     time_transformer = Pipeline(steps=[
         ('binner', TimeCategoryEncoder()),
         ('encoder', OneHotEncoder(handle_unknown='ignore'))
     ])
     
-    categorical_features = ['mood', 'diet', 'context']
+    # mood(1), diet(3), context(4)
+    categorical_features = [1, 3, 4] 
     categorical_transformer = OneHotEncoder(handle_unknown='ignore')
     
     preprocessor = ColumnTransformer(
         transformers=[
-            ('time', time_transformer, ['hour']),
+            ('time', time_transformer, [0]), # hour is col 0
             ('cat', categorical_transformer, categorical_features),
-            ('num', StandardScaler(), ['hunger'])
+            ('num', StandardScaler(), [2]) # hunger is col 2
         ])
     
     # Model
@@ -91,7 +88,7 @@ def train():
         top3_idxs = np.argsort(probs[i])[-3:]
         classes = pipeline.classes_
         top3_classes = classes[top3_idxs]
-        if y_test.iloc[i] in top3_classes:
+        if y_test[i] in top3_classes:
             top3_acc += 1
     print(f"Top-3 Accuracy: {top3_acc / len(y_test):.4f}")
     

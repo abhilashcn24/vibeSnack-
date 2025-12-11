@@ -1,5 +1,4 @@
 import joblib
-import pandas as pd
 import numpy as np
 import os
 import json
@@ -13,21 +12,17 @@ def get_time_category(hour):
     return "night"
 
 # IMPORTANT: This class name and structure must match exactly what was defined in train_model.py
-# If train_model.py defined it in global scope, we need to make sure we can load it.
-# However, joblib saves the class definition reference. If train_model.py saved it as 
-# "train_model.TimeCategoryEncoder", then loading it here might be tricky if we don't have that module.
-# But since we are running main.py, and we want to load the model...
-# Actually, the best way is to define it in a shared module (like this one) and import it in train_model.
-# But we had issues with that. 
-# Let's try to define it here exactly as it is.
-
 class TimeCategoryEncoder(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
     def transform(self, X):
-        hours = X.iloc[:, 0] if isinstance(X, pd.DataFrame) else X[:, 0]
+        # Expecting numpy array, hour is col 0
+        if hasattr(X, 'values'):
+             hours = X.iloc[:, 0]
+        else:
+             hours = X[:, 0]
         cats = [get_time_category(h) for h in hours]
-        return pd.DataFrame(cats, columns=['time_of_day_category'])
+        return np.array(cats).reshape(-1, 1)
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "snack_model.joblib")
 
@@ -51,7 +46,14 @@ def load_model():
         return None
 
 def prepare_input(user_input):
-    return pd.DataFrame([user_input])
+    # Order: hour, mood, hunger, diet, context
+    return np.array([[
+        user_input['hour'],
+        user_input['mood'],
+        user_input['hunger'],
+        user_input['diet'],
+        user_input['context']
+    ]], dtype=object)
 
 def predict_snack(model, user_input, snack_catalog, user_history, top_k=3):
     """
