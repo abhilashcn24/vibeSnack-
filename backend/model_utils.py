@@ -26,13 +26,7 @@ class TimeCategoryEncoder(BaseEstimator, TransformerMixin):
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "snack_model.joblib")
 
-# Hack to allow unpickling of a class defined in train_model
-import sys
-from types import ModuleType
-if 'train_model' not in sys.modules:
-    tm = ModuleType('train_model')
-    tm.TimeCategoryEncoder = TimeCategoryEncoder
-    sys.modules['train_model'] = tm
+
 
 def load_model():
     if os.path.exists(MODEL_PATH):

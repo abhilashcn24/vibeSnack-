@@ -20,20 +20,7 @@ def load_data():
         data_generator.generate_data()
         return pd.read_csv("snack_data.csv")
 
-# Define TimeCategoryEncoder locally to ensure it can be pickled and unpickled correctly
-# without relying on external module structure during unpickling if the path changes.
-class TimeCategoryEncoder(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
-    def transform(self, X):
-        # Expecting numpy array, hour is col 0
-        if hasattr(X, 'values'):
-             hours = X.iloc[:, 0]
-        else:
-             hours = X[:, 0]
-             
-        cats = [model_utils.get_time_category(h) for h in hours]
-        return np.array(cats).reshape(-1, 1)
+
 
 def train():
     print("Loading data...")
@@ -50,7 +37,7 @@ def train():
     
     # 1. Time Transformer (Custom)
     time_transformer = Pipeline(steps=[
-        ('binner', TimeCategoryEncoder()),
+        ('binner', model_utils.TimeCategoryEncoder()),
         ('encoder', OneHotEncoder(handle_unknown='ignore'))
     ])
     
